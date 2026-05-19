@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电费联单分析</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+  background: #0f0f1a;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+.container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+/* Header */
+.header {
+  text-align: center; padding: 30px 0 20px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border-radius: 16px; margin-bottom: 24px;
+}
+.header h1 { font-size: 26px; color: #fff; margin-bottom: 6px; }
+.header p { font-size: 14px; color: #8899bb; }
+
+/* Upload Area */
+.upload-zone {
+  border: 2px dashed #334;
+  border-radius: 16px; padding: 50px 20px;
+  text-align: center; cursor: pointer;
+  transition: all 0.3s; background: #14142a; margin-bottom: 20px;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: #4a7cff; background: #1a1a35;
+}
+.upload-zone .icon { font-size: 48px; margin-bottom: 12px; }
+.upload-zone .hint { color: #667; font-size: 13px; margin-top: 8px; }
+.upload-zone.has-file {
+  border-color: #22c55e; border-style: solid;
+  background: #0a2a1a; padding: 20px;
+}
+.upload-zone.has-file .icon { font-size: 24px; }
+.file-info { color: #88bbaa; font-size: 14px; }
+
+/* API Key Input */
+.api-key-bar {
+  display: flex; gap: 10px; align-items: center;
+  background: #14142a; padding: 12px 16px; border-radius: 12px;
+  margin-bottom: 20px;
+}
+.api-key-bar label { color: #8899bb; font-size: 13px; white-space: nowrap; }
+.api-key-bar input {
+  flex: 1; background: #1a1a30; border: 1px solid #334;
+  color: #e0e0e0; padding: 8px 12px; border-radius: 8px;
+  font-size: 14px; font-family: monospace;
+}
+.api-key-bar input:focus { outline: none; border-color: #4a7cff; }
+.api-key-bar .lock-icon { color: #22c55e; font-size: 14px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 24px; border: none; border-radius: 10px;
+  font-size: 15px; cursor: pointer; transition: all 0.3s;
+  font-weight: 600;
+}
+.btn-primary { background: linear-gradient(135deg, #4a7cff, #6c63ff); color: #fff; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(74,124,255,0.3); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-secondary { background: #1a1a30; color: #8899bb; border: 1px solid #334; }
+.btn-secondary:hover { background: #222240; }
+.btn-row { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
+
+/* Status */
+.status {
+  text-align: center; padding: 12px; margin: 12px 0;
+  border-radius: 10px; display: none;
+}
+.status.loading { display: block; background: #1a1a30; color: #888; }
+.status.loading .spinner {
+  display: inline-block; width: 20px; height: 20px;
+  border: 2px solid #334; border-top: 2px solid #4a7cff;
+  border-radius: 50%; animation: spin 1s linear infinite;
+  margin-right: 8px; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.status.error { display: block; background: #2a1010; color: #ff6b6b; border: 1px solid #442; }
+.status.success { display: block; background: #0a2a1a; color: #22c55e; border: 1px solid #1a3a2a; }
+
+/* Analysis Result */
+.result { display: none; }
+.result.show { display: block; }
+
+/* Summary Cards */
+.summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.summary-card {
+  background: linear-gradient(135deg, #1a1a30, #1f1f35);
+  border-radius: 12px; padding: 16px; border: 1px solid #282845;
+}
+.summary-card .label { font-size: 12px; color: #667; margin-bottom: 4px; }
+.summary-card .value { font-size: 22px; font-weight: 700; color: #fff; }
+.summary-card .unit { font-size: 12px; color: #8899bb; margin-left: 2px; }
+.summary-card .sub { font-size: 12px; color: #667; margin-top: 4px; }
+.summary-card.highlight { border-color: #4a7cff; background: linear-gradient(135deg, #1a1a3e, #0f2850); }
+
+/* Section */
+.section {
+  background: #14142a; border-radius: 14px; padding: 20px;
+  margin-bottom: 16px; border: 1px solid #222240;
+}
+.section h3 {
+  font-size: 16px; color: #8899bb; margin-bottom: 14px;
+  padding-bottom: 8px; border-bottom: 1px solid #222240;
+}
+
+/* Table */
+.data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.data-table th {
+  text-align: left; padding: 8px 10px; color: #667;
+  font-weight: 500; font-size: 12px; border-bottom: 1px solid #222240;
+}
+.data-table td { padding: 8px 10px; border-bottom: 1px solid #1a1a30; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table .num { text-align: right; font-family: monospace; }
+
+/* Fee breakdown bar */
+.fee-bar-wrapper { margin: 4px 0; }
+.fee-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: #ccc; }
+.fee-bar-track { height: 6px; background: #1a1a30; border-radius: 3px; margin-top: 3px; overflow: hidden; }
+.fee-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+/* Peak/Flat/Valley chart */
+.pfv-chart { display: flex; height: 100px; align-items: flex-end; gap: 20px; justify-content: center; padding: 10px 0; }
+.pfv-bar { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pfv-bar .bar { width: 50px; border-radius: 6px 6px 0 0; min-height: 10px; transition: height 0.6s ease; }
+.pfv-bar .bar-label { font-size: 12px; color: #667; }
+.pfv-bar .bar-value { font-size: 14px; font-weight: 600; color: #ccc; }
+
+/* Suggestions */
+.suggestion-item {
+  padding: 12px; background: #1a1a30; border-radius: 10px;
+  margin-bottom: 8px; border-left: 3px solid #4a7cff;
+}
+.suggestion-item:last-child { margin-bottom: 0; }
+.suggestion-item .tag {
+  display: inline-block; font-size: 11px; padding: 2px 8px;
+  border-radius: 4px; margin-bottom: 4px; font-weight: 600;
+}
+.tag-save { background: #1a3a2a; color: #22c55e; }
+.tag-profit { background: #2a1a3a; color: #a855f7; }
+.tag-alert { background: #3a1a1a; color: #ff6b6b; }
+
+/* Raw data */
+.raw-toggle {
+  text-align: right; margin-top: 12px;
+}
+.raw-toggle a { color: #4a7cff; font-size: 12px; cursor: pointer; text-decoration: none; }
+.raw-data { display: none; margin-top: 8px; }
+.raw-data.show { display: block; }
+.raw-data pre {
+  background: #0a0a15; padding: 12px; border-radius: 8px;
+  font-size: 11px; color: #667; overflow-x: auto; max-height: 300px;
+}
+
+/* History */
+.history-list { margin-top: 12px; }
+.history-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px; background: #1a1a30; border-radius: 8px; margin-bottom: 6px;
+  cursor: pointer; transition: background 0.2s;
+}
+.history-item:hover { background: #222240; }
+.history-item .date { color: #8899bb; font-size: 13px; }
+.history-item .summary { color: #667; font-size: 12px; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .container { padding: 12px; }
+  .summary-grid { grid-template-columns: 1fr 1fr; }
+  .api-key-bar { flex-direction: column; }
+  .api-key-bar input { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <h1>⚡ 电费联单分析</h1>
+  <p>上传国网电费账单 PDF，AI 自动解析并生成优化建议</p>
+</div>
+
+<!-- API Key -->
+<div class="api-key-bar">
+  <span class="lock-icon">🔒</span>
+  <label>DeepSeek API Key</label>
+  <input type="password" id="apiKey" placeholder="sk-..." value="sk-4478403bcb3d49fe8a9fc6618a389c6e">
+</div>
+
+<!-- Upload -->
+<div class="upload-zone" id="uploadZone">
+  <div class="icon" id="uploadIcon">📄</div>
+  <div><strong>点击上传 或 拖拽 PDF 到此处</strong></div>
+  <div class="hint">支持国网电费账单 PDF 格式</div>
+  <input type="file" id="fileInput" accept=".pdf" style="display:none">
+</div>
+
+<!-- Analyze Button -->
+<div class="btn-row">
+  <button class="btn btn-primary" id="analyzeBtn" disabled>🚀 开始分析</button>
+</div>
+
+<!-- Status -->
+<div class="status" id="status"></div>
+
+<!-- Result -->
+<div class="result" id="result">
+  <!-- Summary Cards -->
+  <div class="summary-grid" id="summaryGrid"></div>
+
+  <!-- 电费构成 -->
+  <div class="section" id="feeSection">
+    <h3>💰 电费构成明细</h3>
+    <div id="feeBreakdown"></div>
+  </div>
+
+  <!-- 峰平谷用电 -->
+  <div class="section" id="pfvSection">
+    <h3>📊 峰平谷用电分布</h3>
+    <div class="pfv-chart" id="pfvChart"></div>
+  </div>
+
+  <!-- 详细数据表 -->
+  <div class="section" id="detailSection">
+    <h3>📋 详细数据</h3>
+    <table class="data-table" id="detailTable">
+      <thead><tr><th>指标</th><th class="num">数值</th></tr></thead>
+      <tbody id="detailBody"></tbody>
+    </table>
+  </div>
+
+  <!-- AI 分析建议 -->
+  <div class="section" id="suggestionsSection">
+    <h3>💡 AI 分析建议</h3>
+    <div id="suggestionsList"></div>
+  </div>
+
+  <!-- 原始数据 -->
+  <div class="raw-toggle">
+    <a onclick="toggleRaw()">📝 查看原始解析数据</a>
+  </div>
+  <div class="raw-data" id="rawData">
+    <pre id="rawPre"></pre>
+  </div>
+</div>
+
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const status = document.getElementById('status');
+const result = document.getElementById('result');
+const apiKeyInput = document.getElementById('apiKey');
+
+let currentFile = null;
+let extractedText = '';
+
+// Upload handlers
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length > 0) handleFile(e.target.files[0]);
+});
+
+async function handleFile(file) {
+  if (!file.name.endsWith('.pdf')) {
+    showStatus('error', '⚠️ 请选择 PDF 文件');
+    return;
+  }
+  currentFile = file;
+  uploadZone.classList.add('has-file');
+  document.getElementById('uploadIcon').innerHTML = '✅';
+  uploadZone.querySelector('strong').textContent = file.name;
+  uploadZone.querySelector('.hint').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+  analyzeBtn.disabled = false;
+  hideStatus();
+
+  // Auto-extract text from PDF
+  showStatus('loading', '📖 正在解析 PDF...');
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      fullText += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    extractedText = fullText;
+    hideStatus();
+    showStatus('success', `✅ PDF 解析完成 (${pdf.numPages} 页，${extractedText.length} 字符)`);
+    setTimeout(hideStatus, 2000);
+  } catch (e) {
+    showStatus('error', `❌ PDF 解析失败: ${e.message}`);
+  }
+}
+
+// Analyze
+analyzeBtn.addEventListener('click', async () => {
+  if (!currentFile || !extractedText) {
+    showStatus('error', '⚠️ 请先上传并解析 PDF');
+    return;
+  }
+  const apiKey = apiKeyInput.value.trim();
+  if (!apiKey.startsWith('sk-')) {
+    showStatus('error', '⚠️ 请输入有效的 DeepSeek API Key');
+    return;
+  }
+
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = '⏳ 分析中...';
+  showStatus('loading', '🧠 AI 正在分析电费账单...');
+
+  try {
+    const analysis = await callDeepSeek(apiKey, extractedText);
+    renderResult(analysis);
+    saveHistory(currentFile.name, analysis);
+    hideStatus();
+    showStatus('success', '✅ 分析完成！');
+    setTimeout(hideStatus, 2000);
+  } catch (e) {
+    showStatus('error', `❌ 分析失败: ${e.message}`);
+  } finally {
+    analyzeBtn.disabled = false;
+    analyzeBtn.textContent = '🚀 开始分析';
+  }
+});
+
+async function callDeepSeek(apiKey, text) {
+  const prompt = `你是一位精通中国电力市场的高级能源分析师。以下是国网电费账单的原始文本，请提取所有关键信息并以 JSON 格式输出。
+
+输出格式必须严格如下（不要输出 markdown 代码块标记，只输出纯 JSON）：
+
+{
+  "basic": {
+    "account_no": "户号",
+    "account_name": "户名",
+    "address": "用电地址",
+    "elec_type": "用电类别",
+    "voltage": "电压等级",
+    "bill_period": "账单周期（起止日期）"
+  },
+  "energy": {
+    "total_kwh": 总用电量（千瓦时）,
+    "peak_kwh": 峰电量,
+    "flat_kwh": 平电量, 
+    "valley_kwh": 谷电量,
+    "monthly_change_pct": 环比变化百分比（去掉%号，如12.17）
+  },
+  "fee": {
+    "total_fee": 总电费（元）,
+    "breakdown": [
+      {"name": "费用名称", "amount": 金额, "pct": 占比百分比}
+    ]
+  },
+  "power_factor": 功率因数值（如0.98）,
+  "avg_price": 平均电价（元/千瓦时）,
+  "earnings": {
+    "peak_valley_saving": 峰谷分时电价损益金额,
+    "power_factor_reward": 功率因数调整电费金额
+  },
+  "suggestions": [
+    {"type": "save|profit|alert", "content": "具体建议"}
+  ]
+}
+
+注意事项：
+1. 费用 breakdown 中的各费用明细金额，确保总和接近 total_fee
+2. 峰平谷电量尽可能精确提取
+3. 环比变化从"环比增长/减少 X%"中提取
+4. 功率因数调整电费为正表示奖励（负数为惩罚）
+5. 给出3-5条具体的节能建议
+
+以下是电费账单文本：
+
+${text}`;
+
+  const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: '你是一位精通电力市场的高级能源分析师，从国网电费账单文本中提取结构化数据并给出分析建议。只输出JSON，不要额外文字。' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.1,
+      max_tokens: 4096
+    })
+  });
+
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error(`API 错误 (${resp.status}): ${err}`);
+  }
+
+  const data = await resp.json();
+  const content = data.choices[0].message.content;
+
+  // Parse JSON from response (handle code blocks if present)
+  let jsonStr = content;
+  const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match) jsonStr = match[1];
+  
+  return JSON.parse(jsonStr);
+}
+
+function renderResult(analysis) {
+  result.classList.add('show');
+  document.getElementById('rawPre').textContent = JSON.stringify(analysis, null, 2);
+
+  // Summary Cards
+  const b = analysis.basic;
+  const e = analysis.energy;
+  const f = analysis.fee;
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="summary-card highlight">
+      <div class="label">${b.account_name || ''}</div>
+      <div class="value">${(e.total_kwh || 0).toLocaleString()}</div>
+      <div class="unit">kWh · 总用电量</div>
+      <div class="sub">${b.bill_period || ''}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">总电费</div>
+      <div class="value">${(f.total_fee || 0).toFixed(2)}</div>
+      <div class="unit">元</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">平均电价</div>
+      <div class="value">${(analysis.avg_price || 0).toFixed(4)}</div>
+      <div class="unit">元/kWh</div>
+      <div class="sub">环比 ${analysis.energy.monthly_change_pct > 0 ? '↑' : '↓'} ${Math.abs(analysis.energy.monthly_change_pct || 0).toFixed(1)}%</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">功率因数</div>
+      <div class="value">${(analysis.power_factor || 0).toFixed(2)}</div>
+      <div class="unit">${(analysis.power_factor || 0) >= 0.9 ? '✅ 达标' : '⚠️ 需提升'}</div>
+    </div>
+  `;
+
+  // Fee Breakdown
+  const colors = ['#4a7cff', '#6c63ff', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+  const fees = f.breakdown || [];
+  document.getElementById('feeBreakdown').innerHTML = fees.map((item, i) => `
+    <div class="fee-bar-wrapper">
+      <div class="fee-bar-label">
+        <span>${item.name}</span>
+        <span>${(item.amount || 0).toFixed(2)} 元 (${(item.pct || 0).toFixed(1)}%)</span>
+      </div>
+      <div class="fee-bar-track">
+        <div class="fee-bar-fill" style="width:${item.pct}%;background:${colors[i % colors.length]}"></div>
+      </div>
+    </div>
+  `).join('');
+
+  // Peak/Flat/Valley Chart
+  const maxKwh = Math.max(e.peak_kwh || 0, e.flat_kwh || 0, e.valley_kwh || 0) || 1;
+  document.getElementById('pfvChart').innerHTML = `
+    <div class="pfv-bar">
+      <div class="bar-value">${(e.peak_kwh || 0).toLocaleString()}</div>
+      <div class="bar" style="height:${(e.peak_kwh / maxKwh * 80)}px;background:#ef4444"></div>
+      <div class="bar-label">峰</div>
+    </div>
+    <div class="pfv-bar">
+      <div class="bar-value">${(e.flat_kwh || 0).toLocaleString()}</div>
+      <div class="bar" style="height:${(e.flat_kwh / maxKwh * 80)}px;background:#f59e0b"></div>
+      <div class="bar-label">平</div>
+    </div>
+    <div class="pfv-bar">
+      <div class="bar-value">${(e.valley_kwh || 0).toLocaleString()}</div>
+      <div class="bar" style="height:${(e.valley_kwh / maxKwh * 80)}px;background:#22c55e"></div>
+      <div class="bar-label">谷</div>
+    </div>
+  `;
+
+  // Detail Table
+  const details = [
+    ['户号', b.account_no],
+    ['户名', b.account_name],
+    ['用电地址', b.address],
+    ['用电类别', b.elec_type],
+    ['电压等级', b.voltage],
+    ['账单周期', b.bill_period],
+    ['总用电量', `${(e.total_kwh || 0).toLocaleString()} kWh`],
+    ['峰电量', `${(e.peak_kwh || 0).toLocaleString()} kWh`],
+    ['平电量', `${(e.flat_kwh || 0).toLocaleString()} kWh`],
+    ['谷电量', `${(e.valley_kwh || 0).toLocaleString()} kWh`],
+    ['总电费', `${f.total_fee.toFixed(2)} 元`],
+    ['平均电价', `${(analysis.avg_price || 0).toFixed(4)} 元/kWh`],
+    ['功率因数', (analysis.power_factor || 0).toFixed(2)],
+    ['环比变化', `${analysis.energy.monthly_change_pct > 0 ? '+' : ''}${(analysis.energy.monthly_change_pct || 0).toFixed(1)}%`],
+  ];
+  if (analysis.earnings) {
+    if (analysis.earnings.peak_valley_saving) {
+      details.push(['峰谷分时损益', `${(analysis.earnings.peak_valley_saving > 0 ? '+' : '')}${analysis.earnings.peak_valley_saving.toFixed(2)} 元`]);
+    }
+    if (analysis.earnings.power_factor_reward) {
+      details.push(['力调电费', `${(analysis.earnings.power_factor_reward > 0 ? '+' : '')}${analysis.earnings.power_factor_reward.toFixed(2)} 元`]);
+    }
+  }
+  document.getElementById('detailBody').innerHTML = details.map(d => `
+    <tr><td>${d[0]}</td><td class="num">${d[1]}</td></tr>
+  `).join('');
+
+  // Suggestions
+  const suggestions = analysis.suggestions || [];
+  const tagLabels = { save: 'tag-save', profit: 'tag-profit', alert: 'tag-alert' };
+  const tagTexts = { save: '💰 省钱', profit: '📈 增收', alert: '⚠️ 提醒' };
+  document.getElementById('suggestionsList').innerHTML = suggestions.map(s => `
+    <div class="suggestion-item">
+      <span class="tag ${tagLabels[s.type] || 'tag-save'}">${tagTexts[s.type] || '💡 建议'}</span>
+      <div>${s.content}</div>
+    </div>
+  `).join('');
+}
+
+function toggleRaw() {
+  document.getElementById('rawData').classList.toggle('show');
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideStatus() {
+  document.getElementById('status').style.display = 'none';
+}
+
+function saveHistory(name, analysis) {
+  let history = JSON.parse(localStorage.getItem('elec_bill_history') || '[]');
+  history.unshift({
+    fileName: name,
+    date: new Date().toISOString(),
+    total_kwh: analysis.energy?.total_kwh,
+    total_fee: analysis.fee?.total_fee,
+    account: analysis.basic?.account_name
+  });
+  if (history.length > 20) history = history.slice(0, 20);
+  localStorage.setItem('elec_bill_history', JSON.stringify(history));
+}
+
+// Init: load history
+(function loadHistory() {
+  const history = JSON.parse(localStorage.getItem('elec_bill_history') || '[]');
+  if (history.length > 0) {
+    // Show history in the upload zone
+    const hint = document.querySelector('.upload-zone .hint');
+    hint.textContent = `📋 历史分析 ${history.length} 次 · 点击上传新账单`;
+  }
+})();
+</script>
+</body>
+</html>
