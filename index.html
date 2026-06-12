@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>电费联单分析</title>
+<title>电费联单分析 v2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,176 +13,198 @@ body {
   color: #e0e0e0;
   min-height: 100vh;
 }
-.container { max-width: 900px; margin: 0 auto; padding: 20px; }
+.container { max-width: 960px; margin: 0 auto; padding: 20px; }
 
 /* Header */
 .header {
-  text-align: center; padding: 30px 0 20px;
+  text-align: center; padding: 28px 0 18px;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  border-radius: 16px; margin-bottom: 24px;
+  border-radius: 16px; margin-bottom: 16px;
 }
-.header h1 { font-size: 26px; color: #fff; margin-bottom: 6px; }
-.header p { font-size: 14px; color: #8899bb; }
+.header h1 { font-size: 24px; color: #fff; margin-bottom: 4px; }
+.header p { font-size: 13px; color: #8899bb; }
+.header .badge { display: inline-block; background: #22c55e22; color: #22c55e; font-size: 11px; padding: 2px 10px; border-radius: 10px; margin-top: 4px; border: 1px solid #22c55e44; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; background: #14142a; border-radius: 12px; padding: 4px; }
+.tab { flex: 1; text-align: center; padding: 10px 0; border-radius: 10px; cursor: pointer; font-size: 14px; color: #667; transition: all 0.2s; }
+.tab:hover { color: #8899bb; background: #1a1a30; }
+.tab.active { background: linear-gradient(135deg, #4a7cff33, #6c63ff33); color: #aabbee; font-weight: 600; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
 /* Upload Area */
 .upload-zone {
   border: 2px dashed #334;
-  border-radius: 16px; padding: 50px 20px;
+  border-radius: 16px; padding: 40px 20px;
   text-align: center; cursor: pointer;
-  transition: all 0.3s; background: #14142a; margin-bottom: 20px;
+  transition: all 0.3s; background: #14142a; margin-bottom: 16px;
 }
-.upload-zone:hover, .upload-zone.dragover {
-  border-color: #4a7cff; background: #1a1a35;
-}
-.upload-zone .icon { font-size: 48px; margin-bottom: 12px; }
-.upload-zone .hint { color: #667; font-size: 13px; margin-top: 8px; }
-.upload-zone.has-file {
-  border-color: #22c55e; border-style: solid;
-  background: #0a2a1a; padding: 20px;
-}
+.upload-zone:hover, .upload-zone.dragover { border-color: #4a7cff; background: #1a1a35; }
+.upload-zone .icon { font-size: 40px; margin-bottom: 10px; }
+.upload-zone .hint { color: #667; font-size: 13px; margin-top: 6px; }
+.upload-zone.has-file { border-color: #22c55e; border-style: solid; background: #0a2a1a; padding: 16px; }
 .upload-zone.has-file .icon { font-size: 24px; }
 .file-info { color: #88bbaa; font-size: 14px; }
 
-/* API Key Input */
-.api-key-bar {
-  display: flex; gap: 10px; align-items: center;
-  background: #14142a; padding: 12px 16px; border-radius: 12px;
-  margin-bottom: 20px;
+/* API Key + Mode */
+.toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar-item {
+  display: flex; gap: 8px; align-items: center;
+  background: #14142a; padding: 8px 14px; border-radius: 10px; flex: 1; min-width: 200px;
 }
-.api-key-bar label { color: #8899bb; font-size: 13px; white-space: nowrap; }
-.api-key-bar input {
+.toolbar-item label { color: #8899bb; font-size: 12px; white-space: nowrap; }
+.toolbar-item input {
   flex: 1; background: #1a1a30; border: 1px solid #334;
-  color: #e0e0e0; padding: 8px 12px; border-radius: 8px;
-  font-size: 14px; font-family: monospace;
+  color: #e0e0e0; padding: 6px 10px; border-radius: 6px;
+  font-size: 13px; font-family: monospace;
 }
-.api-key-bar input:focus { outline: none; border-color: #4a7cff; }
-.api-key-bar .lock-icon { color: #22c55e; font-size: 14px; }
+.toolbar-item input:focus { outline: none; border-color: #4a7cff; }
+.mode-toggle {
+  display: flex; background: #1a1a30; border-radius: 8px; overflow: hidden;
+}
+.mode-btn { padding: 7px 16px; font-size: 12px; cursor: pointer; border: none; background: transparent; color: #667; transition: all 0.2s; }
+.mode-btn.active { background: #4a7cff; color: #fff; }
+.mode-btn:first-child.active { background: #22c55e; }
 
 /* Buttons */
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 10px 24px; border: none; border-radius: 10px;
-  font-size: 15px; cursor: pointer; transition: all 0.3s;
-  font-weight: 600;
+  padding: 9px 20px; border: none; border-radius: 10px;
+  font-size: 14px; cursor: pointer; transition: all 0.3s; font-weight: 600;
 }
 .btn-primary { background: linear-gradient(135deg, #4a7cff, #6c63ff); color: #fff; }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(74,124,255,0.3); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .btn-secondary { background: #1a1a30; color: #8899bb; border: 1px solid #334; }
 .btn-secondary:hover { background: #222240; }
-.btn-row { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
+.btn-success { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; }
+.btn-sm { font-size: 12px; padding: 6px 14px; }
+.btn-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
 
 /* Status */
-.status {
-  text-align: center; padding: 12px; margin: 12px 0;
-  border-radius: 10px; display: none;
-}
+.status { text-align: center; padding: 10px; margin: 10px 0; border-radius: 10px; display: none; font-size: 13px; }
 .status.loading { display: block; background: #1a1a30; color: #888; }
-.status.loading .spinner {
-  display: inline-block; width: 20px; height: 20px;
-  border: 2px solid #334; border-top: 2px solid #4a7cff;
-  border-radius: 50%; animation: spin 1s linear infinite;
-  margin-right: 8px; vertical-align: middle;
-}
+.status.loading .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #334; border-top: 2px solid #4a7cff; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .status.error { display: block; background: #2a1010; color: #ff6b6b; border: 1px solid #442; }
 .status.success { display: block; background: #0a2a1a; color: #22c55e; border: 1px solid #1a3a2a; }
 
-/* Analysis Result */
+/* Result */
 .result { display: none; }
 .result.show { display: block; }
 
 /* Summary Cards */
-.summary-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px; margin-bottom: 20px;
-}
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .summary-card {
   background: linear-gradient(135deg, #1a1a30, #1f1f35);
-  border-radius: 12px; padding: 16px; border: 1px solid #282845;
+  border-radius: 12px; padding: 14px; border: 1px solid #282845;
 }
-.summary-card .label { font-size: 12px; color: #667; margin-bottom: 4px; }
-.summary-card .value { font-size: 22px; font-weight: 700; color: #fff; }
-.summary-card .unit { font-size: 12px; color: #8899bb; margin-left: 2px; }
-.summary-card .sub { font-size: 12px; color: #667; margin-top: 4px; }
+.summary-card .label { font-size: 11px; color: #667; margin-bottom: 3px; }
+.summary-card .value { font-size: 20px; font-weight: 700; color: #fff; }
+.summary-card .unit { font-size: 11px; color: #8899bb; margin-left: 2px; }
+.summary-card .sub { font-size: 11px; color: #667; margin-top: 3px; }
 .summary-card.highlight { border-color: #4a7cff; background: linear-gradient(135deg, #1a1a3e, #0f2850); }
 
 /* Section */
-.section {
-  background: #14142a; border-radius: 14px; padding: 20px;
-  margin-bottom: 16px; border: 1px solid #222240;
-}
-.section h3 {
-  font-size: 16px; color: #8899bb; margin-bottom: 14px;
-  padding-bottom: 8px; border-bottom: 1px solid #222240;
-}
+.section { background: #14142a; border-radius: 14px; padding: 18px; margin-bottom: 14px; border: 1px solid #222240; }
+.section h3 { font-size: 15px; color: #8899bb; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #222240; }
 
 /* Table */
-.data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.data-table th {
-  text-align: left; padding: 8px 10px; color: #667;
-  font-weight: 500; font-size: 12px; border-bottom: 1px solid #222240;
-}
-.data-table td { padding: 8px 10px; border-bottom: 1px solid #1a1a30; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { text-align: left; padding: 6px 8px; color: #667; font-weight: 500; font-size: 11px; border-bottom: 1px solid #222240; }
+.data-table td { padding: 6px 8px; border-bottom: 1px solid #1a1a30; }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table .num { text-align: right; font-family: monospace; }
+.data-table .highlight-row { background: #1a2a4a; }
 
-/* Fee breakdown bar */
-.fee-bar-wrapper { margin: 4px 0; }
-.fee-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: #ccc; }
-.fee-bar-track { height: 6px; background: #1a1a30; border-radius: 3px; margin-top: 3px; overflow: hidden; }
+/* PFV Chart */
+.pfv-chart { display: flex; height: 90px; align-items: flex-end; gap: 16px; justify-content: center; padding: 8px 0; }
+.pfv-bar { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pfv-bar .bar { width: 44px; border-radius: 6px 6px 0 0; min-height: 8px; transition: height 0.6s ease; }
+.pfv-bar .bar-label { font-size: 11px; color: #667; }
+.pfv-bar .bar-value { font-size: 13px; font-weight: 600; color: #ccc; }
+
+/* Fee Breakdown */
+.fee-bar-wrapper { margin: 3px 0; }
+.fee-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: #ccc; }
+.fee-bar-track { height: 5px; background: #1a1a30; border-radius: 3px; margin-top: 2px; overflow: hidden; }
 .fee-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
 
-/* Peak/Flat/Valley chart */
-.pfv-chart { display: flex; height: 100px; align-items: flex-end; gap: 20px; justify-content: center; padding: 10px 0; }
-.pfv-bar { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.pfv-bar .bar { width: 50px; border-radius: 6px 6px 0 0; min-height: 10px; transition: height 0.6s ease; }
-.pfv-bar .bar-label { font-size: 12px; color: #667; }
-.pfv-bar .bar-value { font-size: 14px; font-weight: 600; color: #ccc; }
-
 /* Suggestions */
-.suggestion-item {
-  padding: 12px; background: #1a1a30; border-radius: 10px;
-  margin-bottom: 8px; border-left: 3px solid #4a7cff;
-}
+.suggestion-item { padding: 10px; background: #1a1a30; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid #4a7cff; font-size: 13px; }
 .suggestion-item:last-child { margin-bottom: 0; }
-.suggestion-item .tag {
-  display: inline-block; font-size: 11px; padding: 2px 8px;
-  border-radius: 4px; margin-bottom: 4px; font-weight: 600;
-}
+.suggestion-item .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; margin-bottom: 3px; font-weight: 600; }
 .tag-save { background: #1a3a2a; color: #22c55e; }
 .tag-profit { background: #2a1a3a; color: #a855f7; }
 .tag-alert { background: #3a1a1a; color: #ff6b6b; }
 
 /* Raw data */
-.raw-toggle {
-  text-align: right; margin-top: 12px;
-}
-.raw-toggle a { color: #4a7cff; font-size: 12px; cursor: pointer; text-decoration: none; }
-.raw-data { display: none; margin-top: 8px; }
+.raw-toggle { text-align: right; margin-top: 10px; }
+.raw-toggle a { color: #4a7cff; font-size: 11px; cursor: pointer; text-decoration: none; }
+.raw-data { display: none; margin-top: 6px; }
 .raw-data.show { display: block; }
-.raw-data pre {
-  background: #0a0a15; padding: 12px; border-radius: 8px;
-  font-size: 11px; color: #667; overflow-x: auto; max-height: 300px;
-}
+.raw-data pre { background: #0a0a15; padding: 10px; border-radius: 8px; font-size: 10px; color: #667; overflow-x: auto; max-height: 250px; }
 
-/* History */
-.history-list { margin-top: 12px; }
+/* History list */
+.history-list { margin-top: 10px; }
 .history-item {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 10px; background: #1a1a30; border-radius: 8px; margin-bottom: 6px;
+  padding: 8px 12px; background: #1a1a30; border-radius: 8px; margin-bottom: 5px;
   cursor: pointer; transition: background 0.2s;
 }
 .history-item:hover { background: #222240; }
-.history-item .date { color: #8899bb; font-size: 13px; }
-.history-item .summary { color: #667; font-size: 12px; }
+.history-item .info { flex: 1; }
+.history-item .date { color: #8899bb; font-size: 12px; }
+.history-item .summary { color: #667; font-size: 11px; }
+
+/* Month selector for batch */
+.month-list { max-height: 300px; overflow-y: auto; }
+.month-entry { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #1a1a30; border-radius: 8px; margin-bottom: 4px; font-size: 13px; }
+.month-entry .del-btn { margin-left: auto; color: #ff6b6b; cursor: pointer; font-size: 16px; }
+
+/* Comparison chart */
+.comparison-chart { display: flex; height: 140px; align-items: flex-end; gap: 3px; padding: 6px 0; position: relative; }
+.comp-bar { flex: 1; min-width: 8px; border-radius: 3px 3px 0 0; position: relative; cursor: pointer; transition: opacity 0.2s; }
+.comp-bar:hover { opacity: 0.8; }
+.comp-bar .tooltip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1a1a30; color: #ccc; padding: 4px 8px; border-radius: 4px; font-size: 10px; white-space: nowrap; z-index: 10; border: 1px solid #334; }
+.comp-bar:hover .tooltip { display: block; }
+
+/* Two-part calculator */
+.calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.calc-card { background: #1a1a30; border-radius: 10px; padding: 14px; }
+.calc-card .label { font-size: 11px; color: #667; margin-bottom: 4px; }
+.calc-card .value { font-size: 22px; font-weight: 700; color: #fff; }
+.calc-card .sub { font-size: 11px; color: #667; margin-top: 2px; }
+.calc-card.positive { border: 1px solid #ef444444; }
+.calc-card.positive .value { color: #ef4444; }
+.calc-card.negative { border: 1px solid #22c55e44; }
+.calc-card.negative .value { color: #22c55e; }
+
+.param-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.param-row label { color: #8899bb; font-size: 12px; min-width: 100px; }
+.param-row input { background: #1a1a30; border: 1px solid #334; color: #e0e0e0; padding: 6px 10px; border-radius: 6px; font-size: 13px; width: 100px; }
+.param-row input:focus { outline: none; border-color: #4a7cff; }
+.param-row .hint { color: #556; font-size: 11px; }
+
+/* Input group */
+.input-group { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+.input-group .field { display: flex; flex-direction: column; gap: 3px; }
+.input-group label { font-size: 11px; color: #667; }
+.input-group input { background: #1a1a30; border: 1px solid #334; color: #e0e0e0; padding: 6px 10px; border-radius: 6px; font-size: 13px; width: 120px; }
+.input-group input:focus { outline: none; border-color: #4a7cff; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 30px; color: #556; font-size: 13px; }
 
 /* Responsive */
 @media (max-width: 600px) {
   .container { padding: 12px; }
   .summary-grid { grid-template-columns: 1fr 1fr; }
-  .api-key-bar { flex-direction: column; }
-  .api-key-bar input { width: 100%; }
+  .calc-grid { grid-template-columns: 1fr; }
+  .toolbar { flex-direction: column; }
+  .toolbar-item { min-width: auto; }
+  .input-group { flex-direction: column; }
 }
 </style>
 </head>
@@ -191,28 +213,58 @@ body {
 
 <!-- Header -->
 <div class="header">
-  <h1>⚡ 电费联单分析</h1>
-  <p>上传国网电费账单 PDF，AI 自动解析并生成优化建议</p>
+  <h1>⚡ 电费联单分析 v2</h1>
+  <p>上传国网电费账单 PDF，自动解析 | 多月份对比 | 两部制测算</p>
+  <div class="badge">✨ 新增：本地解析 · 需量提取 · 多月份对比 · 两部制测算</div>
 </div>
 
-<!-- API Key -->
-<div class="api-key-bar">
-  <span class="lock-icon">🔒</span>
-  <label>DeepSeek API Key</label>
-  <input type="password" id="apiKey" placeholder="sk-..." value="">
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" data-tab="tab-analyze" onclick="switchTab('tab-analyze')">📄 单月分析</div>
+  <div class="tab" data-tab="tab-compare" onclick="switchTab('tab-compare')">📊 多月份对比</div>
+  <div class="tab" data-tab="tab-twopart" onclick="switchTab('tab-twopart')">🔁 两部制测算</div>
+</div>
+
+<!-- ============================================= -->
+<!-- TAB 1: 单月分析 -->
+<!-- ============================================= -->
+<div class="tab-content active" id="tab-analyze">
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="toolbar-item" style="flex:0 0 auto;">
+    <label>解析模式</label>
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="local" onclick="setMode('local')">本地解析</button>
+      <button class="mode-btn" data-mode="api" onclick="setMode('api')">AI 解析</button>
+    </div>
+  </div>
+  <div class="toolbar-item" id="apiKeyBar" style="display:none;">
+    <label>🔒 DeepSeek Key</label>
+    <input type="password" id="apiKey" placeholder="sk-..." value="">
+  </div>
 </div>
 
 <!-- Upload -->
 <div class="upload-zone" id="uploadZone">
   <div class="icon" id="uploadIcon">📄</div>
   <div><strong>点击上传 或 拖拽 PDF 到此处</strong></div>
-  <div class="hint">支持国网电费账单 PDF 格式</div>
+  <div class="hint" id="uploadHint">支持国网电费账单 PDF 格式（新版/旧版均可）</div>
   <input type="file" id="fileInput" accept=".pdf" style="display:none">
 </div>
 
-<!-- Analyze Button -->
+<!-- Month label -->
+<div class="input-group" style="margin-bottom:12px;display:none;" id="monthLabelRow">
+  <div class="field">
+    <label>月份标签（用于多月份对比）</label>
+    <input type="text" id="monthLabel" placeholder="如 2025-06" value="">
+  </div>
+</div>
+
+<!-- Buttons -->
 <div class="btn-row">
-  <button class="btn btn-primary" id="analyzeBtn" disabled>🚀 开始分析</button>
+  <button class="btn btn-primary" id="analyzeBtn" disabled>🚀 解析账单</button>
+  <button class="btn btn-secondary btn-sm" id="saveMonthBtn" style="display:none;" onclick="saveToComparison()">💾 保存到多月份对比</button>
 </div>
 
 <!-- Status -->
@@ -220,61 +272,174 @@ body {
 
 <!-- Result -->
 <div class="result" id="result">
-  <!-- Summary Cards -->
   <div class="summary-grid" id="summaryGrid"></div>
 
-  <!-- 电费构成 -->
-  <div class="section" id="feeSection">
-    <h3>💰 电费构成明细</h3>
-    <div id="feeBreakdown"></div>
-  </div>
-
-  <!-- 峰平谷用电 -->
-  <div class="section" id="pfvSection">
+  <div class="section">
     <h3>📊 峰平谷用电分布</h3>
     <div class="pfv-chart" id="pfvChart"></div>
   </div>
 
-  <!-- 详细数据表 -->
-  <div class="section" id="detailSection">
+  <div class="section">
+    <h3>💰 电费构成明细</h3>
+    <div id="feeBreakdown"></div>
+  </div>
+
+  <div class="section">
     <h3>📋 详细数据</h3>
-    <table class="data-table" id="detailTable">
+    <table class="data-table">
       <thead><tr><th>指标</th><th class="num">数值</th></tr></thead>
       <tbody id="detailBody"></tbody>
     </table>
   </div>
 
-  <!-- AI 分析建议 -->
   <div class="section" id="suggestionsSection">
-    <h3>💡 AI 分析建议</h3>
+    <h3>💡 优化建议</h3>
     <div id="suggestionsList"></div>
   </div>
 
-  <!-- 原始数据 -->
-  <div class="raw-toggle">
-    <a onclick="toggleRaw()">📝 查看原始解析数据</a>
+  <div class="btn-row">
+    <button class="btn btn-secondary btn-sm" onclick="saveToComparison()">💾 保存到多月份对比</button>
+    <button class="btn btn-secondary btn-sm" onclick="exportCSV()">📥 导出 CSV</button>
   </div>
-  <div class="raw-data" id="rawData">
-    <pre id="rawPre"></pre>
+
+  <div class="raw-toggle"><a onclick="toggleRaw()">📝 查看原始解析数据</a></div>
+  <div class="raw-data" id="rawData"><pre id="rawPre"></pre></div>
+</div>
+</div>
+
+<!-- ============================================= -->
+<!-- TAB 2: 多月份对比 -->
+<!-- ============================================= -->
+<div class="tab-content" id="tab-compare">
+  <div class="section">
+    <h3>📊 多月份用电趋势</h3>
+    <div id="compareChart" style="height:180px;position:relative;"></div>
+  </div>
+
+  <div class="section">
+    <h3>📋 月份对比表</h3>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="compareTable">
+        <thead>
+          <tr>
+            <th>月份</th>
+            <th class="num">总电量</th>
+            <th class="num">总电费</th>
+            <th class="num">均价</th>
+            <th class="num">峰电量</th>
+            <th class="num">平电量</th>
+            <th class="num">谷电量</th>
+            <th class="num">需量(kW)</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="compareBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary btn-sm" onclick="exportCompareCSV()">📥 导出 CSV</button>
+    <button class="btn btn-secondary btn-sm" onclick="clearCompare()">🗑️ 清空所有</button>
   </div>
 </div>
 
+<!-- ============================================= -->
+<!-- TAB 3: 两部制测算 -->
+<!-- ============================================= -->
+<div class="tab-content" id="tab-twopart">
+  <div class="section">
+    <h3>⚙️ 参数设置</h3>
+    <div class="input-group">
+      <div class="field">
+        <label>需量费单价（元/kW·月）</label>
+        <input type="number" id="tpDemandPrice" value="51.2" step="0.1" oninput="calcTwoPart()">
+      </div>
+      <div class="field">
+        <label>两部制平段价比单一制低</label>
+        <input type="number" id="tpPriceDiff" value="0.0777" step="0.0001" oninput="calcTwoPart()">
+      </div>
+      <div class="field">
+        <label>增值税抵扣率</label>
+        <input type="number" id="tpVatRate" value="13" step="1" oninput="calcTwoPart()">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>📊 测算结果</h3>
+    <div id="tpResult">
+      <div class="empty-state">请先在"单月分析"中解析账单并保存到多月份对比，或手动输入数据</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>📋 逐月测算明细</h3>
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>月份</th>
+            <th class="num">一部制电费</th>
+            <th class="num">两部制电度</th>
+            <th class="num">需量费</th>
+            <th class="num">两部制合计</th>
+            <th class="num">电费差额</th>
+            <th class="num">增值税抵扣</th>
+            <th class="num">净差额</th>
+          </tr>
+        </thead>
+        <tbody id="tpTableBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
+
+</div><!-- /container -->
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+// === State ===
+let currentMode = 'local';
+let currentFile = null;
+let extractedText = '';
+let currentAnalysis = null;
+let allMonths = JSON.parse(localStorage.getItem('elec_months_v2') || '[]');
+
+// === DOM refs ===
 const uploadZone = document.getElementById('uploadZone');
 const fileInput = document.getElementById('fileInput');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const status = document.getElementById('status');
 const result = document.getElementById('result');
 const apiKeyInput = document.getElementById('apiKey');
+const apiKeyBar = document.getElementById('apiKeyBar');
+const monthLabelInput = document.getElementById('monthLabel');
+const monthLabelRow = document.getElementById('monthLabelRow');
+const saveBtn = document.getElementById('saveMonthBtn');
 
-let currentFile = null;
-let extractedText = '';
+// === Tab switching ===
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+  if (tabId === 'tab-compare') renderCompare();
+  if (tabId === 'tab-twopart') calcTwoPart();
+}
 
-// Upload handlers
+// === Mode switching ===
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+  apiKeyBar.style.display = mode === 'api' ? 'flex' : 'none';
+  if (mode === 'local') analyzeBtn.textContent = '🚀 本地解析';
+  else analyzeBtn.textContent = '🚀 开始分析';
+}
+
+// === Upload handlers ===
 uploadZone.addEventListener('click', () => fileInput.click());
 uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
 uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
@@ -287,10 +452,7 @@ fileInput.addEventListener('change', e => {
 });
 
 async function handleFile(file) {
-  if (!file.name.endsWith('.pdf')) {
-    showStatus('error', '⚠️ 请选择 PDF 文件');
-    return;
-  }
+  if (!file.name.endsWith('.pdf')) { showStatus('error', '⚠️ 请选择 PDF 文件'); return; }
   currentFile = file;
   uploadZone.classList.add('has-file');
   document.getElementById('uploadIcon').innerHTML = '✅';
@@ -299,7 +461,11 @@ async function handleFile(file) {
   analyzeBtn.disabled = false;
   hideStatus();
 
-  // Auto-extract text from PDF
+  // Extract month from filename
+  const m = file.name.match(/(\d{4})[.\-](\d{1,2})/);
+  if (m) monthLabelInput.value = `${m[1]}-${m[2].padStart(2,'0')}`;
+  monthLabelRow.style.display = 'flex';
+
   showStatus('loading', '📖 正在解析 PDF...');
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -319,41 +485,233 @@ async function handleFile(file) {
   }
 }
 
-// Analyze
+// === Analyze ===
 analyzeBtn.addEventListener('click', async () => {
-  if (!currentFile || !extractedText) {
-    showStatus('error', '⚠️ 请先上传并解析 PDF');
-    return;
-  }
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey.startsWith('sk-')) {
-    showStatus('error', '⚠️ 请输入有效的 DeepSeek API Key');
-    return;
-  }
+  if (!currentFile || !extractedText) { showStatus('error', '⚠️ 请先上传并解析 PDF'); return; }
 
-  analyzeBtn.disabled = true;
-  analyzeBtn.textContent = '⏳ 分析中...';
-  showStatus('loading', '🧠 AI 正在分析电费账单...');
-
-  try {
-    const analysis = await callDeepSeek(apiKey, extractedText);
-    renderResult(analysis);
-    saveHistory(currentFile.name, analysis);
-    hideStatus();
-    showStatus('success', '✅ 分析完成！');
-    setTimeout(hideStatus, 2000);
-  } catch (e) {
-    showStatus('error', `❌ 分析失败: ${e.message}`);
-  } finally {
-    analyzeBtn.disabled = false;
-    analyzeBtn.textContent = '🚀 开始分析';
+  if (currentMode === 'local') {
+    // Local regex parsing
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = '⏳ 解析中...';
+    showStatus('loading', '🔍 正在本地解析电费账单...');
+    try {
+      const analysis = parseLocally(extractedText);
+      if (!analysis) {
+        showStatus('error', '❌ 本地解析失败，文本格式不匹配。请尝试 AI 解析模式。');
+        return;
+      }
+      currentAnalysis = analysis;
+      renderResult(analysis);
+      saveBtn.style.display = 'inline-flex';
+      hideStatus();
+      showStatus('success', '✅ 本地解析完成！');
+      setTimeout(hideStatus, 2000);
+    } catch (e) {
+      showStatus('error', `❌ 解析失败: ${e.message}`);
+    } finally {
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = '🚀 本地解析';
+    }
+  } else {
+    // DeepSeek API
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey.startsWith('sk-')) { showStatus('error', '⚠️ 请输入有效的 DeepSeek API Key'); return; }
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = '⏳ 分析中...';
+    showStatus('loading', '🧠 AI 正在分析电费账单...');
+    try {
+      const analysis = await callDeepSeek(apiKey, extractedText);
+      currentAnalysis = analysis;
+      renderResult(analysis);
+      saveBtn.style.display = 'inline-flex';
+      hideStatus();
+      showStatus('success', '✅ 分析完成！');
+      setTimeout(hideStatus, 2000);
+    } catch (e) {
+      showStatus('error', `❌ 分析失败: ${e.message}`);
+    } finally {
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = '🚀 开始分析';
+    }
   }
 });
 
+// ============================================================
+// LOCAL PARSER
+// ============================================================
+function parseLocally(text) {
+  // Try new format first (2024+ 电费账单)
+  let analysis = tryParseNewFormat(text);
+  if (analysis) return analysis;
+
+  // Try old format (2023- 电费核查联)
+  analysis = tryParseOldFormat(text);
+  if (analysis) return analysis;
+
+  return null;
+}
+
+function tryParseNewFormat(text) {
+  // New format: 电费账单 (2024+)
+  const accountNo = extractField(text, /户号\s*(\d+)/);
+  const accountName = extractField(text, /户名\s*(.+?)(?:\n|$)/);
+  const address = extractField(text, /用电地址\s*(.+?)(?:\n|$)/);
+  const elecType = extractField(text, /用电类别\s*(.+?)(?:\n|$)/);
+  const voltage = extractField(text, /电压等级\s*(.+?)(?:\n|$)/);
+  const billPeriod = extractField(text, /账单周期\s*(.+?)(?:\n|$)/);
+
+  const totalKwh = extractNum(text, /本期电量\s*(\d+)/);
+  const totalFee = extractNum(text, /本期电费\s*([\d.]+)/);
+
+  // Average price
+  let avgPrice = 0;
+  const avgMatch = text.match(/均电价\s*([\d.]+)\s*元/);
+  if (avgMatch) avgPrice = parseFloat(avgMatch[1]);
+  else if (totalKwh > 0) avgPrice = Math.round(totalFee / totalKwh * 10000) / 10000;
+
+  // Peak/Flat/Valley - sum across all meters
+  const peakValues = [];
+  const flatValues = [];
+  const valleyValues = [];
+  const regex = /正向有功（(峰|平|谷)）\s+[\d.]+\s+[\d.]+\s+\d+\s+\d+\s+\d+\s+\d+\s+-?\d+\s+(\d+)/g;
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    if (m[1] === '峰') peakValues.push(parseInt(m[2]));
+    else if (m[1] === '平') flatValues.push(parseInt(m[2]));
+    else if (m[1] === '谷') valleyValues.push(parseInt(m[2]));
+  }
+  const peakKwh = peakValues.reduce((a,b) => a+b, 0);
+  const flatKwh = flatValues.reduce((a,b) => a+b, 0);
+  const valleyKwh = valleyValues.reduce((a,b) => a+b, 0);
+
+  // Demand
+  const demandValues = [];
+  const dRegex = /需量[（(]总[）)]\s+[\d.]+\s+[\d.]+\s+\d+\s+(\d+)/g;
+  let dm;
+  while ((dm = dRegex.exec(text)) !== null) demandValues.push(parseInt(dm[1]));
+  const demand = demandValues.reduce((a,b) => a+b, 0);
+
+  // Power factor
+  let powerFactor = 0;
+  const pfRegex = /功率因数\s*([\d.]+)\s*%/;
+  const pfMatch = text.match(pfRegex);
+  if (pfMatch) powerFactor = parseFloat(pfMatch[1]) / 100;
+  else {
+    const pfMatch2 = text.match(/功率因数为([\d.]+)/);
+    if (pfMatch2) powerFactor = parseFloat(pfMatch2[1]);
+  }
+
+  // Monthly change
+  let monthlyChange = 0;
+  const mcMatch = text.match(/环比(?:增长|减少)\s*([\d.]+)%/);
+  if (mcMatch) {
+    const val = parseFloat(mcMatch[1]);
+    monthlyChange = text.includes('环比减少') ? -val : val;
+  }
+
+  // Fee breakdown items
+  const feeItems = [];
+  const feeRegex = /(市场化购电|上网环节线损|输配电|煤电容量|力调电费|峰谷分时|电价交叉|天然气发电|电力保供|抽水蓄能|库区移民|可再生能源|国家重大水利|政府性基金|功率因数调整)\S*\s+(-?[\d.]+)/g;
+  let fm;
+  while ((fm = feeRegex.exec(text)) !== null) {
+    feeItems.push({ name: fm[1].trim(), amount: parseFloat(fm[2]) });
+  }
+
+  if (!totalKwh && !totalFee) return null;
+
+  // Generate suggestions
+  const suggestions = [];
+  const peakPct = totalKwh > 0 ? peakKwh / totalKwh * 100 : 0;
+  const valleyPct = totalKwh > 0 ? valleyKwh / totalKwh * 100 : 0;
+  if (peakPct > 40) suggestions.push({ type: 'save', content: `峰段用电占比 ${peakPct.toFixed(1)}%，建议将部分可调节负荷转移至谷段运行，降低用电成本。` });
+  if (valleyPct < 20) suggestions.push({ type: 'save', content: `谷段用电占比仅 ${valleyPct.toFixed(1)}%，建议增加谷段用电比例。` });
+  if (demand > 0) suggestions.push({ type: 'profit', content: `本月最大需量 ${demand} kW，建议评估转两部制电价或储能削峰的可行性。` });
+  if (powerFactor > 0 && powerFactor < 0.9) suggestions.push({ type: 'alert', content: `功率因数 ${powerFactor.toFixed(2)} 低于标准，需增加无功补偿设备。` });
+  if (powerFactor > 0.95) suggestions.push({ type: 'save', content: `功率因数 ${powerFactor.toFixed(2)} 优秀，力调电费获得奖励。` });
+
+  return {
+    mode: 'local',
+    basic: { account_no: accountNo, account_name: accountName, address, elec_type: elecType, voltage, bill_period: billPeriod },
+    energy: { total_kwh: totalKwh, peak_kwh: peakKwh, flat_kwh: flatKwh, valley_kwh: valleyKwh, monthly_change_pct: monthlyChange },
+    fee: { total_fee: totalFee, breakdown: feeItems },
+    power_factor: powerFactor,
+    avg_price: avgPrice,
+    demand_kw: demand,
+    earnings: { peak_valley_saving: 0, power_factor_reward: 0 },
+    suggestions
+  };
+}
+
+function tryParseOldFormat(text) {
+  // Old format: 电费核查联 (2023-)
+  const accountNo = extractField(text, /户号\s*(\d+)/);
+  const accountName = extractField(text, /户名\s*(.+?)(?:\s+\d|$)/);
+  const billPeriod = extractField(text, /账单周期\s*(.+?)(?:\s+|$)/);
+
+  // Demand from old format: 实际需量 in each table
+  const demandValues = [];
+  const dRegex = /实际需量\s*(\d+)/g;
+  let dm;
+  while ((dm = dRegex.exec(text)) !== null) demandValues.push(parseInt(dm[1]));
+  const demand = demandValues.reduce((a,b) => a+b, 0);
+
+  // Total active power
+  const totalValues = [];
+  const aRegex = /有功总\s+(\d+)/g;
+  let am;
+  while ((am = aRegex.exec(text)) !== null) totalValues.push(parseInt(am[1]));
+  const totalKwh = totalValues.reduce((a,b) => a+b, 0);
+
+  // Total fee
+  const feeMatch = text.match(/金额合计[（(]元[）)]?\s*([\d.]+)/);
+  const totalFee = feeMatch ? parseFloat(feeMatch[1]) : 0;
+
+  // Flat price (old format only has 平段)
+  const flatMatch = text.match(/平\s+([\d.]+)/);
+  const flatPrice = flatMatch ? parseFloat(flatMatch[1]) : 0;
+
+  // Electricity type & voltage
+  const elecType = extractField(text, /执行电价名称[：:]\s*(.+?)(?:\n|$)/);
+  const voltage = extractField(text, /(?:电压等级|到户电价)/);
+
+  if (!totalKwh && !totalFee) return null;
+
+  const avgPrice = totalKwh > 0 ? Math.round(totalFee / totalKwh * 10000) / 10000 : 0;
+
+  const suggestions = [];
+  if (demand > 0) suggestions.push({ type: 'profit', content: `本月最大需量 ${demand} kW（${accountName ? accountName : ''}），旧版单一制无分时电价。` });
+  if (flatPrice > 0) suggestions.push({ type: 'save', content: `到户平段电价 ${flatPrice} 元/kWh，建议评估是否可选择分时电价以降低用电成本。` });
+
+  return {
+    mode: 'local',
+    basic: { account_no: accountNo, account_name: accountName, address: '', elec_type: elecType, voltage, bill_period: billPeriod },
+    energy: { total_kwh: totalKwh, peak_kwh: 0, flat_kwh: totalKwh, valley_kwh: 0, monthly_change_pct: 0 },
+    fee: { total_fee: totalFee, breakdown: [] },
+    power_factor: 0,
+    avg_price: avgPrice,
+    demand_kw: demand,
+    earnings: {},
+    suggestions
+  };
+}
+
+function extractField(text, regex) {
+  const m = text.match(regex);
+  return m ? m[1].trim() : '';
+}
+function extractNum(text, regex) {
+  const m = text.match(regex);
+  return m ? parseFloat(m[1]) : 0;
+}
+
+// ============================================================
+// DEEPSEEK API
+// ============================================================
 async function callDeepSeek(apiKey, text) {
+  // ... (same as original implementation)
   const prompt = `你是一位精通中国电力市场的高级能源分析师。以下是国网电费账单的原始文本，请提取所有关键信息并以 JSON 格式输出。
 
-输出格式必须严格如下（不要输出 markdown 代码块标记，只输出纯 JSON）：
+输出格式必须严格如下（只输出纯 JSON）：
 
 {
   "basic": {
@@ -379,6 +737,7 @@ async function callDeepSeek(apiKey, text) {
   },
   "power_factor": 功率因数值（如0.98）,
   "avg_price": 平均电价（元/千瓦时）,
+  "demand_kw": 最大需量（千瓦）,
   "earnings": {
     "peak_valley_saving": 峰谷分时电价损益金额,
     "power_factor_reward": 功率因数调整电费金额
@@ -394,6 +753,7 @@ async function callDeepSeek(apiKey, text) {
 3. 环比变化从"环比增长/减少 X%"中提取
 4. 功率因数调整电费为正表示奖励（负数为惩罚）
 5. 给出3-5条具体的节能建议
+6. 需量从"需量（总）"字段提取
 
 以下是电费账单文本：
 
@@ -401,10 +761,7 @@ ${text}`;
 
   const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: 'deepseek-chat',
       messages: [
@@ -416,167 +773,394 @@ ${text}`;
     })
   });
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`API 错误 (${resp.status}): ${err}`);
-  }
-
+  if (!resp.ok) { const err = await resp.text(); throw new Error(`API 错误 (${resp.status}): ${err}`); }
   const data = await resp.json();
   const content = data.choices[0].message.content;
-
-  // Parse JSON from response (handle code blocks if present)
   let jsonStr = content;
   const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (match) jsonStr = match[1];
-  
   return JSON.parse(jsonStr);
 }
 
+// ============================================================
+// RENDER RESULT
+// ============================================================
 function renderResult(analysis) {
   result.classList.add('show');
   document.getElementById('rawPre').textContent = JSON.stringify(analysis, null, 2);
 
-  // Summary Cards
-  const b = analysis.basic;
-  const e = analysis.energy;
-  const f = analysis.fee;
-  document.getElementById('summaryGrid').innerHTML = `
-    <div class="summary-card highlight">
-      <div class="label">${b.account_name || ''}</div>
-      <div class="value">${(e.total_kwh || 0).toLocaleString()}</div>
-      <div class="unit">kWh · 总用电量</div>
-      <div class="sub">${b.bill_period || ''}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">总电费</div>
-      <div class="value">${(f.total_fee || 0).toFixed(2)}</div>
-      <div class="unit">元</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">平均电价</div>
-      <div class="value">${(analysis.avg_price || 0).toFixed(4)}</div>
-      <div class="unit">元/kWh</div>
-      <div class="sub">环比 ${analysis.energy.monthly_change_pct > 0 ? '↑' : '↓'} ${Math.abs(analysis.energy.monthly_change_pct || 0).toFixed(1)}%</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">功率因数</div>
-      <div class="value">${(analysis.power_factor || 0).toFixed(2)}</div>
-      <div class="unit">${(analysis.power_factor || 0) >= 0.9 ? '✅ 达标' : '⚠️ 需提升'}</div>
-    </div>
-  `;
+  const b = analysis.basic || {};
+  const e = analysis.energy || {};
+  const f = analysis.fee || {};
+  const demand = analysis.demand_kw || 0;
+  const modeTag = analysis.mode === 'local' ? '🔍' : '🤖';
 
-  // Fee Breakdown
-  const colors = ['#4a7cff', '#6c63ff', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
-  const fees = f.breakdown || [];
-  document.getElementById('feeBreakdown').innerHTML = fees.map((item, i) => `
-    <div class="fee-bar-wrapper">
-      <div class="fee-bar-label">
-        <span>${item.name}</span>
-        <span>${(item.amount || 0).toFixed(2)} 元 (${(item.pct || 0).toFixed(1)}%)</span>
-      </div>
-      <div class="fee-bar-track">
-        <div class="fee-bar-fill" style="width:${item.pct}%;background:${colors[i % colors.length]}"></div>
-      </div>
-    </div>
-  `).join('');
+  // Summary cards
+  let cards = '';
+  cards += `<div class="summary-card highlight">
+    <div class="label">${b.account_name || '用户'} ${modeTag}</div>
+    <div class="value">${(e.total_kwh || 0).toLocaleString()}</div>
+    <div class="unit">kWh · 总用电量</div>
+    <div class="sub">${b.bill_period || ''}</div>
+  </div>`;
+  cards += `<div class="summary-card">
+    <div class="label">总电费</div>
+    <div class="value">${(f.total_fee || 0).toFixed(2)}</div>
+    <div class="unit">元</div>
+  </div>`;
+  cards += `<div class="summary-card">
+    <div class="label">平均电价</div>
+    <div class="value">${(analysis.avg_price || 0).toFixed(4)}</div>
+    <div class="unit">元/kWh</div>
+    ${e.monthly_change_pct ? `<div class="sub">环比 ${e.monthly_change_pct > 0 ? '↑' : '↓'} ${Math.abs(e.monthly_change_pct).toFixed(1)}%</div>` : ''}
+  </div>`;
+  cards += `<div class="summary-card${demand > 0 ? ' highlight' : ''}">
+    <div class="label">最大需量</div>
+    <div class="value">${demand.toLocaleString()}</div>
+    <div class="unit">kW</div>
+    ${demand > 0 ? `<div class="sub">💡 可用于两部制测算</div>` : '<div class="sub">未提取到</div>'}
+  </div>`;
+  document.getElementById('summaryGrid').innerHTML = cards;
 
-  // Peak/Flat/Valley Chart
+  // Peak/Flat/Valley chart
   const maxKwh = Math.max(e.peak_kwh || 0, e.flat_kwh || 0, e.valley_kwh || 0) || 1;
   document.getElementById('pfvChart').innerHTML = `
     <div class="pfv-bar">
       <div class="bar-value">${(e.peak_kwh || 0).toLocaleString()}</div>
       <div class="bar" style="height:${(e.peak_kwh / maxKwh * 80)}px;background:#ef4444"></div>
-      <div class="bar-label">峰</div>
+      <div class="bar-label">峰${e.total_kwh > 0 ? ` (${(e.peak_kwh/e.total_kwh*100).toFixed(1)}%)` : ''}</div>
     </div>
     <div class="pfv-bar">
       <div class="bar-value">${(e.flat_kwh || 0).toLocaleString()}</div>
       <div class="bar" style="height:${(e.flat_kwh / maxKwh * 80)}px;background:#f59e0b"></div>
-      <div class="bar-label">平</div>
+      <div class="bar-label">平${e.total_kwh > 0 ? ` (${(e.flat_kwh/e.total_kwh*100).toFixed(1)}%)` : ''}</div>
     </div>
     <div class="pfv-bar">
       <div class="bar-value">${(e.valley_kwh || 0).toLocaleString()}</div>
       <div class="bar" style="height:${(e.valley_kwh / maxKwh * 80)}px;background:#22c55e"></div>
-      <div class="bar-label">谷</div>
+      <div class="bar-label">谷${e.total_kwh > 0 ? ` (${(e.valley_kwh/e.total_kwh*100).toFixed(1)}%)` : ''}</div>
     </div>
   `;
 
-  // Detail Table
+  // Fee breakdown
+  const colors = ['#4a7cff', '#6c63ff', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+  const fees = f.breakdown || [];
+  if (fees.length > 0) {
+    const total = fees.reduce((a,b) => a + Math.abs(b.amount), 0);
+    document.getElementById('feeBreakdown').innerHTML = fees.map((item, i) => `
+      <div class="fee-bar-wrapper">
+        <div class="fee-bar-label">
+          <span>${item.name}</span>
+          <span>${item.amount.toFixed(2)} 元 (${total > 0 ? (Math.abs(item.amount)/total*100).toFixed(1) : 0}%)</span>
+        </div>
+        <div class="fee-bar-track">
+          <div class="fee-bar-fill" style="width:${total > 0 ? Math.abs(item.amount)/total*100 : 0}%;background:${colors[i % colors.length]}"></div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    document.getElementById('feeBreakdown').innerHTML = '<div style="color:#556;font-size:13px;">暂无可用的费用明细</div>';
+  }
+
+  // Detail table
   const details = [
-    ['户号', b.account_no],
-    ['户名', b.account_name],
-    ['用电地址', b.address],
-    ['用电类别', b.elec_type],
-    ['电压等级', b.voltage],
-    ['账单周期', b.bill_period],
+    ['户号', b.account_no || '-'],
+    ['户名', b.account_name || '-'],
+    ['用电地址', b.address || '-'],
+    ['用电类别', b.elec_type || '-'],
+    ['电压等级', b.voltage || '-'],
+    ['账单周期', b.bill_period || '-'],
     ['总用电量', `${(e.total_kwh || 0).toLocaleString()} kWh`],
     ['峰电量', `${(e.peak_kwh || 0).toLocaleString()} kWh`],
     ['平电量', `${(e.flat_kwh || 0).toLocaleString()} kWh`],
     ['谷电量', `${(e.valley_kwh || 0).toLocaleString()} kWh`],
-    ['总电费', `${f.total_fee.toFixed(2)} 元`],
+    ['最大需量', demand > 0 ? `${demand} kW` : '未提取到'],
+    ['总电费', `${(f.total_fee || 0).toFixed(2)} 元`],
     ['平均电价', `${(analysis.avg_price || 0).toFixed(4)} 元/kWh`],
-    ['功率因数', (analysis.power_factor || 0).toFixed(2)],
-    ['环比变化', `${analysis.energy.monthly_change_pct > 0 ? '+' : ''}${(analysis.energy.monthly_change_pct || 0).toFixed(1)}%`],
   ];
+  if (analysis.power_factor) details.push(['功率因数', analysis.power_factor.toFixed(2)]);
+  if (e.monthly_change_pct) details.push(['环比变化', `${e.monthly_change_pct > 0 ? '+' : ''}${e.monthly_change_pct.toFixed(1)}%`]);
   if (analysis.earnings) {
-    if (analysis.earnings.peak_valley_saving) {
-      details.push(['峰谷分时损益', `${(analysis.earnings.peak_valley_saving > 0 ? '+' : '')}${analysis.earnings.peak_valley_saving.toFixed(2)} 元`]);
-    }
-    if (analysis.earnings.power_factor_reward) {
-      details.push(['力调电费', `${(analysis.earnings.power_factor_reward > 0 ? '+' : '')}${analysis.earnings.power_factor_reward.toFixed(2)} 元`]);
-    }
+    if (analysis.earnings.peak_valley_saving) details.push(['峰谷分时损益', `${analysis.earnings.peak_valley_saving.toFixed(2)} 元`]);
+    if (analysis.earnings.power_factor_reward) details.push(['力调电费', `${analysis.earnings.power_factor_reward.toFixed(2)} 元`]);
   }
-  document.getElementById('detailBody').innerHTML = details.map(d => `
-    <tr><td>${d[0]}</td><td class="num">${d[1]}</td></tr>
-  `).join('');
+  document.getElementById('detailBody').innerHTML = details.map(d => `<tr><td>${d[0]}</td><td class="num">${d[1]}</td></tr>`).join('');
 
   // Suggestions
   const suggestions = analysis.suggestions || [];
+  if (suggestions.length === 0) {
+    // Auto-generate based on data
+    if (demand > 0) suggestions.push({ type: 'profit', content: `本月最大需量 ${demand} kW，建议在"两部制测算"标签页评估转两部制电价的可行性。` });
+    if (f.total_fee > 50000) suggestions.push({ type: 'save', content: '月电费较高，建议评估光伏发电或储能系统的经济效益。' });
+  }
   const tagLabels = { save: 'tag-save', profit: 'tag-profit', alert: 'tag-alert' };
   const tagTexts = { save: '💰 省钱', profit: '📈 增收', alert: '⚠️ 提醒' };
-  document.getElementById('suggestionsList').innerHTML = suggestions.map(s => `
-    <div class="suggestion-item">
+  document.getElementById('suggestionsList').innerHTML = suggestions.map(s =>
+    `<div class="suggestion-item">
       <span class="tag ${tagLabels[s.type] || 'tag-save'}">${tagTexts[s.type] || '💡 建议'}</span>
       <div>${s.content}</div>
-    </div>
-  `).join('');
+    </div>`
+  ).join('');
 }
 
-function toggleRaw() {
-  document.getElementById('rawData').classList.toggle('show');
+// ============================================================
+// SAVE TO COMPARISON
+// ============================================================
+function saveToComparison() {
+  if (!currentAnalysis) { showStatus('error', '⚠️ 请先解析账单'); return; }
+  const label = monthLabelInput.value.trim();
+  if (!label) { showStatus('error', '⚠️ 请填写月份标签'); return; }
+
+  const e = currentAnalysis.energy || {};
+  const f = currentAnalysis.fee || {};
+  const entry = {
+    month: label,
+    total_kwh: e.total_kwh || 0,
+    total_fee: f.total_fee || 0,
+    avg_price: currentAnalysis.avg_price || 0,
+    peak_kwh: e.peak_kwh || 0,
+    flat_kwh: e.flat_kwh || 0,
+    valley_kwh: e.valley_kwh || 0,
+    demand_kw: currentAnalysis.demand_kw || 0,
+    power_factor: currentAnalysis.power_factor || 0,
+    account: (currentAnalysis.basic || {}).account_name || '',
+    date: new Date().toISOString()
+  };
+
+  // Replace if same month exists
+  let months = JSON.parse(localStorage.getItem('elec_months_v2') || '[]');
+  const idx = months.findIndex(m => m.month === label);
+  if (idx >= 0) months[idx] = entry;
+  else months.push(entry);
+  months.sort((a,b) => a.month.localeCompare(b.month));
+  localStorage.setItem('elec_months_v2', JSON.stringify(months));
+  allMonths = months;
+
+  showStatus('success', `✅ 已保存 ${label} 到多月份对比`);
+  setTimeout(hideStatus, 2000);
 }
 
+// ============================================================
+// COMPARE TAB
+// ============================================================
+function renderCompare() {
+  const months = JSON.parse(localStorage.getItem('elec_months_v2') || '[]');
+  allMonths = months;
+
+  // Chart
+  const chartEl = document.getElementById('compareChart');
+  if (months.length === 0) {
+    chartEl.innerHTML = '<div class="empty-state">暂无数据，请先在"单月分析"中解析并保存账单</div>';
+    document.getElementById('compareBody').innerHTML = '';
+    return;
+  }
+
+  const maxKwh = Math.max(...months.map(m => m.total_kwh), 1);
+  chartEl.innerHTML = `<div class="comparison-chart">${months.map((m, i) => {
+    const h = m.total_kwh / maxKwh * 130;
+    return `<div class="comp-bar" style="height:${h}px;background:linear-gradient(0deg,#4a7cff,${months.length > 1 ? '#6c63ff' : '#4a7cff'});" title="${m.month}: ${m.total_kwh.toLocaleString()} kWh">
+      <div class="tooltip">${m.month}<br>${m.total_kwh.toLocaleString()} kWh<br>${(m.total_fee || 0).toFixed(0)} 元<br>需量: ${m.demand_kw || '-'} kW</div>
+    </div>`;
+  }).join('')}</div>`;
+
+  // Table
+  const sumKwh = months.reduce((a,b) => a + b.total_kwh, 0);
+  const sumFee = months.reduce((a,b) => a + (b.total_fee || 0), 0);
+  document.getElementById('compareBody').innerHTML = months.map(m => `
+    <tr>
+      <td><strong>${m.month}</strong></td>
+      <td class="num">${m.total_kwh.toLocaleString()}</td>
+      <td class="num">${(m.total_fee || 0).toFixed(2)}</td>
+      <td class="num">${(m.avg_price || 0).toFixed(4)}</td>
+      <td class="num">${(m.peak_kwh || 0).toLocaleString()}</td>
+      <td class="num">${(m.flat_kwh || 0).toLocaleString()}</td>
+      <td class="num">${(m.valley_kwh || 0).toLocaleString()}</td>
+      <td class="num">${m.demand_kw || '-'}</td>
+      <td><span style="color:#ff6b6b;cursor:pointer;font-size:12px;" onclick="removeMonth('${m.month}')">✕ 删除</span></td>
+    </tr>
+  `).join('') + `
+    <tr class="highlight-row">
+      <td><strong>合计/平均</strong></td>
+      <td class="num"><strong>${sumKwh.toLocaleString()}</strong></td>
+      <td class="num"><strong>${sumFee.toFixed(2)}</strong></td>
+      <td class="num"><strong>${months.length > 0 ? (sumFee/sumKwh).toFixed(4) : '-'}</strong></td>
+      <td class="num"><strong>${Math.round(months.reduce((a,b) => a + (b.peak_kwh||0), 0) / months.length).toLocaleString()}</strong></td>
+      <td class="num"><strong>${Math.round(months.reduce((a,b) => a + (b.flat_kwh||0), 0) / months.length).toLocaleString()}</strong></td>
+      <td class="num"><strong>${Math.round(months.reduce((a,b) => a + (b.valley_kwh||0), 0) / months.length).toLocaleString()}</strong></td>
+      <td class="num"><strong>${Math.round(months.reduce((a,b) => a + (b.demand_kw||0), 0) / months.length)}</strong></td>
+      <td></td>
+    </tr>
+  `;
+}
+
+function removeMonth(month) {
+  let months = JSON.parse(localStorage.getItem('elec_months_v2') || '[]');
+  months = months.filter(m => m.month !== month);
+  localStorage.setItem('elec_months_v2', JSON.stringify(months));
+  renderCompare();
+}
+
+function clearCompare() {
+  if (!confirm('确定清空所有月份数据？')) return;
+  localStorage.setItem('elec_months_v2', '[]');
+  renderCompare();
+}
+
+function exportCompareCSV() {
+  const months = JSON.parse(localStorage.getItem('elec_months_v2') || '[]');
+  if (months.length === 0) { showStatus('error', '⚠️ 暂无数据可导出'); return; }
+  let csv = '月份,总电量kWh,总电费元,均价元/kWh,峰电量,平电量,谷电量,需量kW\n';
+  csv += months.map(m => `${m.month},${m.total_kwh},${(m.total_fee||0).toFixed(2)},${(m.avg_price||0).toFixed(4)},${m.peak_kwh||0},${m.flat_kwh||0},${m.valley_kwh||0},${m.demand_kw||0}`).join('\n');
+  downloadCSV(csv, '电费多月份对比.csv');
+}
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+// ============================================================
+// TWO-PART TARIFF CALCULATOR
+// ============================================================
+function calcTwoPart() {
+  const months = JSON.parse(localStorage.getItem('elec_months_v2') || '[]');
+  const demandPrice = parseFloat(document.getElementById('tpDemandPrice').value) || 51.2;
+  const priceDiff = parseFloat(document.getElementById('tpPriceDiff').value) || 0.0777;
+  const vatRate = parseFloat(document.getElementById('tpVatRate').value) || 13;
+
+  const resultEl = document.getElementById('tpResult');
+  const tbody = document.getElementById('tpTableBody');
+
+  if (months.length === 0) {
+    resultEl.innerHTML = '<div class="empty-state">请先在"单月分析"中解析账单并保存到多月份对比</div>';
+    tbody.innerHTML = '';
+    return;
+  }
+
+  let totalOne = 0, totalTwoElec = 0, totalDemand = 0, totalTwo = 0, totalVat = 0;
+  let rows = '';
+
+  for (const m of months) {
+    const kwh = m.total_kwh;
+    const demand = m.demand_kw || 0;
+    // For simplicity: use total_kwh * one_price as one-part fee
+    // two-part: total_kwh * (one_price - priceDiff) + demand * demandPrice
+    const oneFee = m.total_fee || (kwh * 0.7); // fallback
+    const twoElectric = m.total_fee ? (m.total_fee - kwh * priceDiff) : (kwh * (0.7 - priceDiff));
+    const demandFee = demand * demandPrice;
+    const twoTotal = twoElectric + demandFee;
+    const feeDiff = twoTotal - oneFee;
+    const vatSave = vatRate > 0 ? twoTotal / (1 + vatRate/100) * (vatRate/100) : 0;
+    const netDiff = feeDiff - vatSave;
+
+    totalOne += oneFee;
+    totalTwoElec += twoElectric;
+    totalDemand += demandFee;
+    totalTwo += twoTotal;
+    totalVat += vatSave;
+
+    const cls = netDiff > 0 ? '' : ' class="highlight-row"';
+    rows += `<tr${cls}>
+      <td>${m.month}</td>
+      <td class="num">${oneFee.toFixed(2)}</td>
+      <td class="num">${twoElectric.toFixed(2)}</td>
+      <td class="num">${demandFee.toFixed(2)}</td>
+      <td class="num">${twoTotal.toFixed(2)}</td>
+      <td class="num" style="color:${feeDiff > 0 ? '#ef4444' : '#22c55e'}">${feeDiff > 0 ? '+' : ''}${feeDiff.toFixed(2)}</td>
+      <td class="num" style="color:#22c55e">${vatSave.toFixed(2)}</td>
+      <td class="num" style="color:${netDiff > 0 ? '#ef4444' : '#22c55e'};font-weight:700">${netDiff > 0 ? '+' : ''}${netDiff.toFixed(2)}</td>
+    </tr>`;
+  }
+
+  const totalFeeDiff = totalTwo - totalOne;
+  const totalNetDiff = totalFeeDiff - totalVat;
+
+  resultEl.innerHTML = `
+    <div class="calc-grid">
+      <div class="calc-card">
+        <div class="label">一部制年电费</div>
+        <div class="value">${totalOne.toFixed(0)}</div>
+        <div class="sub">元/年</div>
+      </div>
+      <div class="calc-card">
+        <div class="label">两部制电度电费</div>
+        <div class="value">${totalTwoElec.toFixed(0)}</div>
+        <div class="sub">元/年</div>
+      </div>
+      <div class="calc-card ${totalFeeDiff > 0 ? 'positive' : 'negative'}">
+        <div class="label">需量费</div>
+        <div class="value">${totalDemand.toFixed(0)}</div>
+        <div class="sub">元/年</div>
+      </div>
+      <div class="calc-card">
+        <div class="label">两部制电费合计</div>
+        <div class="value">${totalTwo.toFixed(0)}</div>
+        <div class="sub">元/年</div>
+      </div>
+      <div class="calc-card ${totalFeeDiff > 0 ? 'positive' : 'negative'}">
+        <div class="label">转两部制电费差额</div>
+        <div class="value">${totalFeeDiff > 0 ? '+' : ''}${totalFeeDiff.toFixed(0)}</div>
+        <div class="sub">${totalFeeDiff > 0 ? '多付' : '节省'} 元/年</div>
+      </div>
+      <div class="calc-card negative">
+        <div class="label">增值税抵扣 (${vatRate}%)</div>
+        <div class="value">${totalVat.toFixed(0)}</div>
+        <div class="sub">元/年 · 可抵扣进项</div>
+      </div>
+      <div class="calc-card" style="grid-column:1/-1;${totalNetDiff > 0 ? 'class:positive' : 'class:negative'}">
+        <div class="label">净效果</div>
+        <div class="value" style="color:${totalNetDiff > 0 ? '#ef4444' : '#22c55e'}">${totalNetDiff > 0 ? '+' : ''}${totalNetDiff.toFixed(0)}</div>
+        <div class="sub">${totalNetDiff > 0 ? '转两部制后每年净多付，不划算 ❌' : '转两部制后每年净节省，值得考虑 ✅'} · 基于 ${months.length} 个月数据</div>
+      </div>
+    </div>`;
+
+  tbody.innerHTML = rows + `<tr class="highlight-row">
+    <td><strong>合计</strong></td>
+    <td class="num"><strong>${totalOne.toFixed(2)}</strong></td>
+    <td class="num"><strong>${totalTwoElec.toFixed(2)}</strong></td>
+    <td class="num"><strong>${totalDemand.toFixed(2)}</strong></td>
+    <td class="num"><strong>${totalTwo.toFixed(2)}</strong></td>
+    <td class="num" style="color:${totalFeeDiff > 0 ? '#ef4444' : '#22c55e'}"><strong>${totalFeeDiff > 0 ? '+' : ''}${totalFeeDiff.toFixed(2)}</strong></td>
+    <td class="num" style="color:#22c55e"><strong>${totalVat.toFixed(2)}</strong></td>
+    <td class="num" style="color:${totalNetDiff > 0 ? '#ef4444' : '#22c55e'};font-weight:700"><strong>${totalNetDiff > 0 ? '+' : ''}${totalNetDiff.toFixed(2)}</strong></td>
+  </tr>`;
+}
+
+// ============================================================
+// EXPORT (single month)
+// ============================================================
+function exportCSV() {
+  if (!currentAnalysis) { showStatus('error', '⚠️ 请先解析账单'); return; }
+  const label = monthLabelInput.value.trim() || 'unknown';
+  const e = currentAnalysis.energy || {};
+  const f = currentAnalysis.fee || {};
+  const b = currentAnalysis.basic || {};
+  const d = currentAnalysis.demand_kw || 0;
+  const csv = `月份,${label}\n户名,${b.account_name || ''}\n户号,${b.account_no || ''}\n总电量kWh,${e.total_kwh || 0}\n峰电量,${e.peak_kwh || 0}\n平电量,${e.flat_kwh || 0}\n谷电量,${e.valley_kwh || 0}\n最大需量kW,${d}\n总电费元,${(f.total_fee || 0).toFixed(2)}\n平均电价元/kWh,${(currentAnalysis.avg_price || 0).toFixed(4)}\n功率因数,${(currentAnalysis.power_factor || 0).toFixed(2)}\n`;
+  downloadCSV(csv, `电费_${label}.csv`);
+}
+
+// ============================================================
+// UTILITY
+// ============================================================
+function toggleRaw() { document.getElementById('rawData').classList.toggle('show'); }
 function showStatus(type, msg) {
   const el = document.getElementById('status');
   el.className = 'status ' + type;
-  el.textContent = msg;
+  if (type === 'loading') el.innerHTML = `<span class="spinner"></span> ${msg}`;
+  else el.textContent = msg;
   el.style.display = 'block';
 }
-
-function hideStatus() {
-  document.getElementById('status').style.display = 'none';
-}
-
-function saveHistory(name, analysis) {
-  let history = JSON.parse(localStorage.getItem('elec_bill_history') || '[]');
-  history.unshift({
-    fileName: name,
-    date: new Date().toISOString(),
-    total_kwh: analysis.energy?.total_kwh,
-    total_fee: analysis.fee?.total_fee,
-    account: analysis.basic?.account_name
-  });
-  if (history.length > 20) history = history.slice(0, 20);
-  localStorage.setItem('elec_bill_history', JSON.stringify(history));
-}
+function hideStatus() { document.getElementById('status').style.display = 'none'; }
 
 // Init: load history
-(function loadHistory() {
-  const history = JSON.parse(localStorage.getItem('elec_bill_history') || '[]');
-  if (history.length > 0) {
-    // Show history in the upload zone
-    const hint = document.querySelector('.upload-zone .hint');
-    hint.textContent = `📋 历史分析 ${history.length} 次 · 点击上传新账单`;
-  }
+(function() {
+  const months = JSON.parse(localStorage.getItem('elec_months_v2') || '[]');
+  const hint = document.querySelector('.upload-zone .hint');
+  if (months.length > 0) hint.textContent = `📋 已保存 ${months.length} 个月度数据 · 点击上传新账单`;
 })();
 </script>
 </body>
