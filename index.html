@@ -236,12 +236,12 @@ body {
     <label>解析模式</label>
     <div class="mode-toggle">
       <button class="mode-btn active" data-mode="local" onclick="setMode('local')">本地解析</button>
-      <button class="mode-btn" data-mode="api" onclick="setMode('api')">AI 解析</button>
+      <button class="mode-btn" data-mode="api" onclick="setMode('api')">电小团 AI</button>
     </div>
   </div>
   <div class="toolbar-item" id="apiKeyBar" style="display:none;">
-    <label>🔒 DeepSeek Key</label>
-    <input type="password" id="apiKey" placeholder="sk-..." value="">
+    <label>🔑 电小团 API Key</label>
+    <input type="password" id="apiKey" placeholder="输入电小团 API Key" value="">
   </div>
 </div>
 
@@ -497,7 +497,7 @@ analyzeBtn.addEventListener('click', async () => {
     try {
       const analysis = parseLocally(extractedText);
       if (!analysis) {
-        showStatus('error', '❌ 本地解析失败，文本格式不匹配。请尝试 AI 解析模式。');
+        showStatus('error', '❌ 本地解析失败，文本格式不匹配。请尝试 电小团 AI模式。');
         return;
       }
       currentAnalysis = analysis;
@@ -515,7 +515,7 @@ analyzeBtn.addEventListener('click', async () => {
   } else {
     // DeepSeek API
     const apiKey = apiKeyInput.value.trim();
-    if (!apiKey.startsWith('sk-')) { showStatus('error', '⚠️ 请输入有效的 DeepSeek API Key'); return; }
+    if (!apiKey.trim()) { showStatus('error', '⚠️ 请输入电小团 API Key'); return; }
     analyzeBtn.disabled = true;
     analyzeBtn.textContent = '⏳ 分析中...';
     showStatus('loading', '🧠 AI 正在分析电费账单...');
@@ -708,78 +708,45 @@ function extractNum(text, regex) {
 // DEEPSEEK API
 // ============================================================
 async function callDeepSeek(apiKey, text) {
-  // ... (same as original implementation)
-  const prompt = `你是一位精通中国电力市场的高级能源分析师。以下是国网电费账单的原始文本，请提取所有关键信息并以 JSON 格式输出。
+  // 通过电小团 API 网关调用 Hermes AI 分析电费账单
+  const ECS_API = 'http://121.40.44.152/api/chat';
+  
+  const message = '【电费分析】你是一位精通中国电力市场的高级能源分析师。以下是国网电费账单的原始文本，请提取所有关键信息并以 JSON 格式输出。\n\n输出格式必须严格如下（只输出纯 JSON，不要 markdown 代码块标记）：\n\n{\n  "basic": {\n    "account_no": "户号",\n    "account_name": "户名",\n    "address": "用电地址",\n    "elec_type": "用电类别",\n    "voltage": "电压等级",\n    "bill_period": "账单周期（起止日期）"\n  },\n  "energy": {\n    "total_kwh": 总用电量（千瓦时）,\n    "peak_kwh": 峰电量,\n    "flat_kwh": 平电量,\n    "valley_kwh": 谷电量,\n    "monthly_change_pct": 环比变化百分比\n  },\n  "fee": {\n    "total_fee": 总电费（元）,\n    "breakdown": [\n      {"name": "费用名称", "amount": 金额, "pct": 占比百分比}\n    ]\n  },\n  "power_factor": 功率因数值,\n  "avg_price": 平均电价（元/千瓦时）,\n  "demand_kw": 最大需量（千瓦）,\n  "earnings": {\n    "peak_valley_saving": 峰谷分时电价损益金额,\n    "power_factor_reward": 功率因数调整电费金额\n  },\n  "suggestions": [\n    {"type": "save|profit|alert", "content": "具体建议"}\n  ]\n}\n\n注意事项：\n1. 费用 breakdown 中的各费用明细金额，确保总和接近 total_fee\n2. 峰平谷电量尽可能精确提取\n3. 环比变化从"环比增长/减少 X%"中提取\n4. 功率因数调整电费为正表示奖励（负数为惩罚）\n5. 给出3-5条具体的节能建议\n6. 需量从"需量（总）"字段提取\n\n直接输出纯 JSON 对象，不要任何额外文字或 markdown 标记。\n\n以下是电费账单文本：\n\n' + text;
 
-输出格式必须严格如下（只输出纯 JSON）：
-
-{
-  "basic": {
-    "account_no": "户号",
-    "account_name": "户名",
-    "address": "用电地址",
-    "elec_type": "用电类别",
-    "voltage": "电压等级",
-    "bill_period": "账单周期（起止日期）"
-  },
-  "energy": {
-    "total_kwh": 总用电量（千瓦时）,
-    "peak_kwh": 峰电量,
-    "flat_kwh": 平电量, 
-    "valley_kwh": 谷电量,
-    "monthly_change_pct": 环比变化百分比（去掉%号，如12.17）
-  },
-  "fee": {
-    "total_fee": 总电费（元）,
-    "breakdown": [
-      {"name": "费用名称", "amount": 金额, "pct": 占比百分比}
-    ]
-  },
-  "power_factor": 功率因数值（如0.98）,
-  "avg_price": 平均电价（元/千瓦时）,
-  "demand_kw": 最大需量（千瓦）,
-  "earnings": {
-    "peak_valley_saving": 峰谷分时电价损益金额,
-    "power_factor_reward": 功率因数调整电费金额
-  },
-  "suggestions": [
-    {"type": "save|profit|alert", "content": "具体建议"}
-  ]
-}
-
-注意事项：
-1. 费用 breakdown 中的各费用明细金额，确保总和接近 total_fee
-2. 峰平谷电量尽可能精确提取
-3. 环比变化从"环比增长/减少 X%"中提取
-4. 功率因数调整电费为正表示奖励（负数为惩罚）
-5. 给出3-5条具体的节能建议
-6. 需量从"需量（总）"字段提取
-
-以下是电费账单文本：
-
-${text}`;
-
-  const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+  const resp = await fetch(ECS_API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: '你是一位精通电力市场的高级能源分析师，从国网电费账单文本中提取结构化数据并给出分析建议。只输出JSON，不要额外文字。' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.1,
-      max_tokens: 4096
-    })
+      session_id: 'elec-bill-analyzer',
+      message: message,
+      api_key: apiKey
+    }),
+    signal: AbortSignal.timeout(120000)
   });
 
-  if (!resp.ok) { const err = await resp.text(); throw new Error(`API 错误 (${resp.status}): ${err}`); }
+  if (!resp.ok) {
+    const errText = await resp.text();
+    let errMsg = errText;
+    try { const e = JSON.parse(errText); errMsg = e.error || e.message || errText; } catch(ex) {}
+    throw new Error(`API 错误 (${resp.status}): ${errMsg}`);
+  }
+  
   const data = await resp.json();
-  const content = data.choices[0].message.content;
-  let jsonStr = content;
-  const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (match) jsonStr = match[1];
-  return JSON.parse(jsonStr);
+  let resultText = data.response || '';
+  
+  // 尝试提取 JSON
+  const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try { return JSON.parse(jsonMatch[0]); } catch(ex) {}
+  }
+  
+  // 如果解析失败，尝试用 ```json ``` 包裹的情况
+  const codeMatch = resultText.match(/\`\`\`(?:json)?\s*([\s\S]*?)\`\`\`/);
+  if (codeMatch) {
+    try { return JSON.parse(codeMatch[1]); } catch(ex) {}
+  }
+  
+  throw new Error('无法解析 AI 返回的 JSON 结果: ' + resultText.slice(0, 200));
 }
 
 // ============================================================
