@@ -672,7 +672,7 @@ function tryParseOldFormat(text) {
 
   // Electricity type & voltage
   const elecType = extractField(text, /执行电价名称[：:]\s*(.+?)(?:\n|$)/);
-  const voltage = extractField(text, /(?:电压等级|到户电价)/);
+  const voltage = extractField(text, /(?:电压等级|到户电价)(\S*)/);
 
   if (!totalKwh && !totalFee) return null;
 
@@ -697,7 +697,8 @@ function tryParseOldFormat(text) {
 
 function extractField(text, regex) {
   const m = text.match(regex);
-  return m ? m[1].trim() : '';
+  if (m && m[1] !== undefined && m[1] !== null) return m[1].trim();
+  return '';
 }
 function extractNum(text, regex) {
   const m = text.match(regex);
