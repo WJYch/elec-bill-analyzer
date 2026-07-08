@@ -710,7 +710,7 @@ function extractNum(text, regex) {
 // ============================================================
 async function callDeepSeek(apiKey, text) {
   // 通过电小团 API 网关调用 Hermes AI 分析电费账单
-  const ECS_API = 'http://121.40.44.152/api/chat';
+  const ECS_API = 'https://ecs.aishenwo.cn/api/chat';
   
   const message = '【电费分析】你是一位精通中国电力市场的高级能源分析师。以下是国网电费账单的原始文本，请提取所有关键信息并以 JSON 格式输出。\n\n输出格式必须严格如下（只输出纯 JSON，不要 markdown 代码块标记）：\n\n{\n  "basic": {\n    "account_no": "户号",\n    "account_name": "户名",\n    "address": "用电地址",\n    "elec_type": "用电类别",\n    "voltage": "电压等级",\n    "bill_period": "账单周期（起止日期）"\n  },\n  "energy": {\n    "total_kwh": 总用电量（千瓦时）,\n    "peak_kwh": 峰电量,\n    "flat_kwh": 平电量,\n    "valley_kwh": 谷电量,\n    "monthly_change_pct": 环比变化百分比\n  },\n  "fee": {\n    "total_fee": 总电费（元）,\n    "breakdown": [\n      {"name": "费用名称", "amount": 金额, "pct": 占比百分比}\n    ]\n  },\n  "power_factor": 功率因数值,\n  "avg_price": 平均电价（元/千瓦时）,\n  "demand_kw": 最大需量（千瓦）,\n  "earnings": {\n    "peak_valley_saving": 峰谷分时电价损益金额,\n    "power_factor_reward": 功率因数调整电费金额\n  },\n  "suggestions": [\n    {"type": "save|profit|alert", "content": "具体建议"}\n  ]\n}\n\n注意事项：\n1. 费用 breakdown 中的各费用明细金额，确保总和接近 total_fee\n2. 峰平谷电量尽可能精确提取\n3. 环比变化从"环比增长/减少 X%"中提取\n4. 功率因数调整电费为正表示奖励（负数为惩罚）\n5. 给出3-5条具体的节能建议\n6. 需量从"需量（总）"字段提取\n\n直接输出纯 JSON 对象，不要任何额外文字或 markdown 标记。\n\n以下是电费账单文本：\n\n' + text;
 
